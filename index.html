@@ -1,0 +1,1000 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>Alien Finder — Deep Space Signal Intelligence System</title>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+	<style>
+		@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap');
+
+		* {
+			margin: 0;
+			padding: 0;
+			box-sizing: border-box;
+		}
+
+		:root {
+			--bg: #020818;
+			--bg2: #040f22;
+			--cyan: #00cfff;
+			--cyan-dim: rgba(0, 207, 255, 0.15);
+			--cyan-border: rgba(0, 207, 255, 0.2);
+			--red: #ff3b3b;
+			--yellow: #ffb800;
+			--green: #00ff88;
+			--text: #c8e6ff;
+			--muted: #4a8aaa;
+			--font-main: 'Share Tech Mono', monospace;
+			--font-title: 'Orbitron', sans-serif;
+		}
+
+		body {
+			background: var(--bg);
+			color: var(--text);
+			font-family: var(--font-main);
+			min-height: 100vh;
+			overflow-x: hidden;
+		}
+
+		#starfield {
+			position: fixed;
+			inset: 0;
+			pointer-events: none;
+			z-index: 0;
+			overflow: hidden;
+		}
+
+		.star {
+			position: absolute;
+			border-radius: 50%;
+			background: white;
+			animation: twinkle var(--dur, 3s) ease-in-out infinite;
+		}
+
+		@keyframes twinkle {
+
+			0%,
+			100% {
+				opacity: .15
+			}
+
+			50% {
+				opacity: .9
+			}
+		}
+
+		@keyframes blink {
+
+			0%,
+			100% {
+				opacity: 1
+			}
+
+			50% {
+				opacity: .1
+			}
+		}
+
+		@keyframes spin {
+			from {
+				transform: rotate(0deg)
+			}
+
+			to {
+				transform: rotate(360deg)
+			}
+		}
+
+		@keyframes pulse {
+
+			0%,
+			100% {
+				transform: scale(1)
+			}
+
+			50% {
+				transform: scale(1.2)
+			}
+		}
+
+		@keyframes slideIn {
+			from {
+				opacity: 0;
+				transform: translateY(10px)
+			}
+
+			to {
+				opacity: 1;
+				transform: translateY(0)
+			}
+		}
+
+		@keyframes glow {
+
+			0%,
+			100% {
+				box-shadow: 0 0 8px rgba(0, 207, 255, .3)
+			}
+
+			50% {
+				box-shadow: 0 0 24px rgba(0, 207, 255, .8)
+			}
+		}
+
+		#app {
+			position: relative;
+			z-index: 1;
+			display: flex;
+			flex-direction: column;
+			height: 100vh;
+		}
+
+		header {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			padding: 12px 24px;
+			border-bottom: 1px solid var(--cyan-border);
+			background: rgba(2, 8, 24, 0.92);
+			backdrop-filter: blur(10px);
+		}
+
+		.logo {
+			display: flex;
+			align-items: center;
+			gap: 14px;
+		}
+
+		.logo-icon {
+			width: 38px;
+			height: 38px;
+			border-radius: 50%;
+			border: 2px solid var(--cyan);
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			font-size: 18px;
+			animation: glow 2s ease-in-out infinite;
+		}
+
+		.logo-title {
+			font-family: var(--font-title);
+			font-size: 15px;
+			color: var(--cyan);
+			letter-spacing: 4px;
+		}
+
+		.logo-sub {
+			font-size: 8px;
+			letter-spacing: 3px;
+			color: var(--muted);
+			margin-top: 2px;
+		}
+
+		.header-stats {
+			display: flex;
+			gap: 28px;
+			align-items: center;
+		}
+
+		.stat-box {
+			text-align: center;
+		}
+
+		.stat-box .val {
+			font-family: var(--font-title);
+			font-size: 20px;
+			font-weight: 700;
+			color: var(--cyan);
+		}
+
+		.stat-box .val.red {
+			color: var(--red);
+		}
+
+		.stat-box .lbl {
+			font-size: 8px;
+			letter-spacing: 2px;
+			color: var(--muted);
+		}
+
+		#clock {
+			font-family: var(--font-title);
+			font-size: 13px;
+			color: var(--cyan);
+			letter-spacing: 2px;
+			text-align: right;
+		}
+
+		.body {
+			display: flex;
+			flex: 1;
+			overflow: hidden;
+		}
+
+		#signal-list {
+			width: 270px;
+			border-right: 1px solid var(--cyan-border);
+			overflow-y: auto;
+			padding: 0;
+			background: rgba(2, 8, 24, 0.6);
+		}
+
+		.list-header {
+			font-size: 8px;
+			letter-spacing: 3px;
+			color: var(--muted);
+			padding: 10px 16px;
+			border-bottom: 1px solid var(--cyan-border);
+		}
+
+		.sig-item {
+			padding: 12px 14px;
+			border-bottom: 1px solid rgba(0, 207, 255, 0.06);
+			border-left: 2px solid transparent;
+			cursor: pointer;
+			transition: all 0.15s;
+		}
+
+		.sig-item:hover {
+			background: rgba(0, 207, 255, 0.06);
+		}
+
+		.sig-item.active {
+			background: rgba(0, 207, 255, 0.09);
+			border-left: 2px solid var(--cyan);
+		}
+
+		.sig-top {
+			display: flex;
+			justify-content: space-between;
+			align-items: flex-start;
+		}
+
+		.sig-name {
+			font-size: 12px;
+			font-weight: bold;
+			color: #c8e6ff;
+			letter-spacing: 1px;
+		}
+
+		.sig-item.active .sig-name {
+			color: var(--cyan);
+		}
+
+		.sig-id {
+			font-size: 9px;
+			color: var(--muted);
+			margin-top: 2px;
+		}
+
+		.sig-type {
+			font-size: 9px;
+			color: #3a6a88;
+			margin-top: 1px;
+		}
+
+		.badge {
+			font-size: 7px;
+			letter-spacing: 1px;
+			padding: 2px 6px;
+			border-radius: 2px;
+			border: 1px solid;
+			font-family: var(--font-main);
+		}
+
+		.badge.CRITICAL {
+			color: var(--red);
+			background: rgba(255, 59, 59, .12);
+			border-color: rgba(255, 59, 59, .4);
+			animation: blink 1s ease-in-out infinite;
+		}
+
+		.badge.FLAGGED {
+			color: var(--yellow);
+			background: rgba(255, 184, 0, .12);
+			border-color: rgba(255, 184, 0, .4);
+		}
+
+		.badge.MONITORING {
+			color: var(--cyan);
+			background: rgba(0, 207, 255, .1);
+			border-color: rgba(0, 207, 255, .35);
+		}
+
+		.badge.CLEAR {
+			color: var(--green);
+			background: rgba(0, 255, 136, .1);
+			border-color: rgba(0, 255, 136, .35);
+		}
+
+		.sig-intensity-pct {
+			font-size: 11px;
+			color: #7aaac8;
+			margin-top: 4px;
+			text-align: right;
+		}
+
+		.intensity-bar {
+			margin-top: 6px;
+			height: 2px;
+			background: rgba(0, 207, 255, .1);
+			border-radius: 1px;
+		}
+
+		.intensity-fill {
+			height: 100%;
+			border-radius: 1px;
+			transition: width 0.5s;
+		}
+
+		.main-panel {
+			flex: 1;
+			display: flex;
+			flex-direction: column;
+			overflow: hidden;
+		}
+
+		.signal-header {
+			padding: 14px 22px;
+			border-bottom: 1px solid var(--cyan-border);
+			background: linear-gradient(135deg, rgba(0, 207, 255, 0.04), transparent);
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+		}
+
+		.sig-title {
+			font-family: var(--font-title);
+			font-size: 20px;
+			color: var(--cyan);
+			letter-spacing: 3px;
+		}
+
+		.sig-meta {
+			font-size: 10px;
+			color: var(--muted);
+			margin-top: 4px;
+			letter-spacing: 1px;
+		}
+
+		.title-row {
+			display: flex;
+			align-items: center;
+			gap: 10px;
+			flex-wrap: wrap;
+		}
+
+		.repeat-badge {
+			font-size: 8px;
+			padding: 2px 8px;
+			background: rgba(255, 0, 170, .12);
+			color: #ff00aa;
+			border: 1px solid rgba(255, 0, 170, .35);
+			border-radius: 2px;
+			letter-spacing: 1px;
+		}
+
+		.ai-btn {
+			background: linear-gradient(135deg, rgba(0, 207, 255, .15), rgba(0, 85, 170, .15));
+			border: 1px solid rgba(0, 207, 255, .5);
+			color: var(--cyan);
+			font-family: var(--font-main);
+			font-size: 10px;
+			letter-spacing: 2px;
+			padding: 10px 18px;
+			cursor: pointer;
+			border-radius: 3px;
+			transition: all 0.2s;
+			text-transform: uppercase;
+		}
+
+		.ai-btn:hover {
+			background: linear-gradient(135deg, rgba(0, 207, 255, .3), rgba(0, 85, 170, .3));
+			box-shadow: 0 0 20px rgba(0, 207, 255, .4);
+		}
+
+		.tabs {
+			display: flex;
+			gap: 2px;
+			padding: 0 22px;
+			border-bottom: 1px solid var(--cyan-border);
+		}
+
+		.tab-btn {
+			background: none;
+			border: none;
+			border-bottom: 2px solid transparent;
+			color: var(--muted);
+			font-family: var(--font-main);
+			font-size: 10px;
+			letter-spacing: 2px;
+			padding: 8px 14px;
+			cursor: pointer;
+			text-transform: uppercase;
+			transition: all 0.2s;
+		}
+
+		.tab-btn:hover {
+			color: var(--cyan);
+		}
+
+		.tab-btn.active {
+			color: var(--cyan);
+			border-bottom: 2px solid var(--cyan);
+		}
+
+		.tab-content {
+			flex: 1;
+			overflow-y: auto;
+			padding: 18px 22px;
+		}
+
+		.tab-pane {
+			display: none;
+			animation: slideIn 0.3s ease;
+		}
+
+		.tab-pane.active {
+			display: block;
+		}
+
+		.stat-cards {
+			display: grid;
+			grid-template-columns: repeat(4, 1fr);
+			gap: 10px;
+			margin-bottom: 18px;
+		}
+
+		.stat-card {
+			background: rgba(0, 207, 255, 0.04);
+			border: 1px solid var(--cyan-border);
+			border-radius: 4px;
+			padding: 12px 14px;
+		}
+
+		.card-label {
+			font-size: 8px;
+			letter-spacing: 2px;
+			color: var(--muted);
+			margin-bottom: 6px;
+		}
+
+		.card-value {
+			font-family: var(--font-title);
+			font-size: 17px;
+			font-weight: 700;
+		}
+
+		.two-col {
+			display: grid;
+			grid-template-columns: 1fr 1fr;
+			gap: 14px;
+		}
+
+		.panel {
+			background: rgba(0, 207, 255, 0.03);
+			border: 1px solid var(--cyan-border);
+			border-radius: 4px;
+			padding: 14px;
+		}
+
+		.panel-title {
+			font-size: 8px;
+			letter-spacing: 3px;
+			color: var(--muted);
+			margin-bottom: 12px;
+		}
+
+		#radar-svg {
+			display: block;
+			margin: 0 auto;
+		}
+
+		.radar-lbl {
+			font-size: 8px;
+			letter-spacing: 2px;
+			color: var(--muted);
+			text-align: center;
+			margin-top: 8px;
+		}
+
+		.live-bar-wrap {
+			height: 8px;
+			background: rgba(0, 207, 255, .08);
+			border-radius: 4px;
+			overflow: hidden;
+			margin-top: 8px;
+		}
+
+		#live-bar {
+			height: 100%;
+			border-radius: 4px;
+			transition: width 0.5s ease;
+		}
+
+		.log-table {
+			width: 100%;
+			border-collapse: collapse;
+			font-size: 11px;
+		}
+
+		.log-table th {
+			font-size: 8px;
+			letter-spacing: 2px;
+			color: var(--muted);
+			padding: 6px 10px;
+			text-align: left;
+			border-bottom: 1px solid var(--cyan-border);
+		}
+
+		.log-table td {
+			padding: 9px 10px;
+			border-bottom: 1px solid rgba(0, 207, 255, .06);
+		}
+
+		.log-table tr:hover td {
+			background: rgba(0, 207, 255, .04);
+		}
+
+		#ai-output {
+			font-size: 12px;
+			line-height: 1.9;
+			color: var(--text);
+			white-space: pre-wrap;
+			min-height: 200px;
+		}
+
+		.ai-loading {
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			padding: 40px 0;
+			gap: 14px;
+		}
+
+		.spinner {
+			width: 40px;
+			height: 40px;
+			border: 2px solid rgba(0, 207, 255, .2);
+			border-top: 2px solid var(--cyan);
+			border-radius: 50%;
+			animation: spin 0.8s linear infinite;
+		}
+
+		.spin-lbl {
+			font-size: 10px;
+			color: var(--muted);
+			letter-spacing: 3px;
+			animation: blink 1s ease-in-out infinite;
+		}
+
+		.ai-placeholder {
+			text-align: center;
+			padding: 40px 0;
+		}
+
+		.ai-placeholder .emoji {
+			font-size: 36px;
+			margin-bottom: 10px;
+		}
+
+		.ai-placeholder p {
+			font-size: 10px;
+			color: var(--muted);
+			letter-spacing: 2px;
+		}
+
+		.ai-bold {
+			color: var(--cyan);
+			font-weight: bold;
+		}
+
+		::-webkit-scrollbar {
+			width: 4px;
+		}
+
+		::-webkit-scrollbar-track {
+			background: #010c1a;
+		}
+
+		::-webkit-scrollbar-thumb {
+			background: rgba(0, 207, 255, .3);
+			border-radius: 2px;
+		}
+	</style>
+</head>
+
+<body>
+
+	<div id="starfield"></div>
+
+	<div id="app">
+		<header>
+			<div class="logo">
+				<div class="logo-icon">👽</div>
+				<div>
+					<div class="logo-title">ALIEN FINDER</div>
+					<div class="logo-sub">DEEP SPACE SIGNAL INTELLIGENCE SYSTEM</div>
+				</div>
+			</div>
+			<div class="header-stats">
+				<div class="stat-box">
+					<div class="val" id="h-total">5</div>
+					<div class="lbl">SIGNALS</div>
+				</div>
+				<div class="stat-box">
+					<div class="val" id="h-flagged">3</div>
+					<div class="lbl">FLAGGED</div>
+				</div>
+				<div class="stat-box">
+					<div class="val red" id="h-critical">1</div>
+					<div class="lbl">CRITICAL</div>
+				</div>
+				<div>
+					<div id="clock">00:00:00</div>
+					<div style="font-size:8px;letter-spacing:2px;color:var(--muted);text-align:right;">UTC STATION TIME
+					</div>
+				</div>
+			</div>
+		</header>
+
+		<div class="body">
+
+			<div id="signal-list">
+				<div class="list-header">ACTIVE SIGNAL FEEDS</div>
+			</div>
+
+			<div class="main-panel">
+
+				<div class="signal-header">
+					<div>
+						<div class="title-row">
+							<span class="sig-title" id="sel-name">WOW-X9</span>
+							<span class="badge CRITICAL" id="sel-badge">CRITICAL</span>
+							<span class="repeat-badge" id="sel-repeat" style="display:none;">REPEATING</span>
+						</div>
+						<div class="sig-meta" id="sel-meta">SIG-001 · 1420.4 MHz · Narrowband · RA 19h 22m · 120 ly
+						</div>
+					</div>
+					<button class="ai-btn" onclick="runAI()">⚡ RUN AI ANALYSIS</button>
+				</div>
+
+				<div class="tabs">
+					<button class="tab-btn active" onclick="switchTab('overview', this)">OVERVIEW</button>
+					<button class="tab-btn" onclick="switchTab('spectrum', this)">SPECTRUM</button>
+					<button class="tab-btn" onclick="switchTab('history', this)">HISTORY</button>
+					<button class="tab-btn" onclick="switchTab('ai', this)">🤖 AI REPORT</button>
+				</div>
+
+				<div class="tab-content">
+
+					<div class="tab-pane active" id="tab-overview">
+						<div class="stat-cards">
+							<div class="stat-card">
+								<div class="card-label">LIVE INTENSITY</div>
+								<div class="card-value" id="c-intensity" style="color:var(--red)">94%</div>
+							</div>
+							<div class="stat-card">
+								<div class="card-label">FREQUENCY</div>
+								<div class="card-value" id="c-freq" style="color:var(--cyan);font-size:13px">1420.4 MHz
+								</div>
+							</div>
+							<div class="stat-card">
+								<div class="card-label">DISTANCE</div>
+								<div class="card-value" id="c-dist" style="color:#7aaac8">120 ly</div>
+							</div>
+							<div class="stat-card">
+								<div class="card-label">LAST DETECTED</div>
+								<div class="card-value" id="c-time" style="color:var(--muted);font-size:14px">02:41:18
+								</div>
+							</div>
+						</div>
+						<div class="two-col">
+							<div class="panel">
+								<div class="panel-title">ANOMALY PROFILE RADAR</div>
+								<canvas id="radarChart" height="200"></canvas>
+							</div>
+							<div class="panel" style="display:flex;flex-direction:column;align-items:center;">
+								<div class="panel-title" style="width:100%">DIRECTIONAL SCAN</div>
+								<svg id="radar-svg" viewBox="0 0 100 100" width="190" height="190">
+									<circle cx="50" cy="50" r="44" fill="none" stroke="rgba(0,207,255,.1)"
+										stroke-width=".5" />
+									<circle cx="50" cy="50" r="33" fill="none" stroke="rgba(0,207,255,.07)"
+										stroke-width=".5" />
+									<circle cx="50" cy="50" r="22" fill="none" stroke="rgba(0,207,255,.1)"
+										stroke-width=".5" />
+									<circle cx="50" cy="50" r="11" fill="none" stroke="rgba(0,207,255,.12)"
+										stroke-width=".5" />
+									<line x1="6" y1="50" x2="94" y2="50" stroke="rgba(0,207,255,.07)"
+										stroke-width=".5" />
+									<line x1="50" y1="6" x2="50" y2="94" stroke="rgba(0,207,255,.07)"
+										stroke-width=".5" />
+									<defs>
+										<radialGradient id="sweepGrad" cx="0%" cy="0%" r="100%">
+											<stop offset="0%" stop-color="#00cfff" stop-opacity=".55" />
+											<stop offset="100%" stop-color="#00cfff" stop-opacity="0" />
+										</radialGradient>
+									</defs>
+									<path id="sweep-path" fill="url(#sweepGrad)" />
+									<line id="sweep-line" x1="50" y1="50" x2="94" y2="50" stroke="#00cfff"
+										stroke-width=".8" opacity=".9" />
+									<circle cx="68" cy="31" r="2.2" fill="#ff3b3b" opacity=".9"
+										style="animation:pulse 1.2s ease-in-out infinite" />
+									<circle cx="35" cy="62" r="1.8" fill="#ffb800" opacity=".85" />
+									<circle cx="72" cy="58" r="1.3" fill="#00cfff" opacity=".7" />
+									<circle cx="50" cy="50" r="2" fill="#00cfff" opacity=".85" />
+								</svg>
+								<div class="radar-lbl">SWEEP: <span id="sweep-angle">0</span>°</div>
+							</div>
+						</div>
+					</div>
+
+					<div class="tab-pane" id="tab-spectrum">
+						<div class="panel" style="margin-bottom:14px">
+							<div class="panel-title">24-HOUR SIGNAL INTENSITY WATERFALL</div>
+							<canvas id="lineChart" height="120"></canvas>
+						</div>
+						<div class="panel">
+							<div class="panel-title">LIVE INTENSITY — <span id="live-pct">94</span>%</div>
+							<div class="live-bar-wrap">
+								<div id="live-bar"
+									style="width:94%;background:linear-gradient(90deg,#ff3b3b,#00cfff);box-shadow:0 0 12px #ff3b3b;">
+								</div>
+							</div>
+						</div>
+					</div>
+
+					<div class="tab-pane" id="tab-history">
+						<div class="panel" style="margin-bottom:14px">
+							<div class="panel-title">MONTHLY SIGNAL DETECTIONS</div>
+							<canvas id="barChart" height="120"></canvas>
+						</div>
+						<div>
+							<div class="panel-title" style="margin-bottom:8px">ALL OBSERVATIONS LOG</div>
+							<table class="log-table">
+								<thead>
+									<tr>
+										<th>ID</th>
+										<th>NAME</th>
+										<th>TYPE</th>
+										<th>FREQ</th>
+										<th>DISTANCE</th>
+										<th>TIME</th>
+										<th>STATUS</th>
+									</tr>
+								</thead>
+								<tbody id="log-tbody"></tbody>
+							</table>
+						</div>
+					</div>
+
+					<div class="tab-pane" id="tab-ai">
+						<div class="panel">
+							<div class="panel-title">🤖 AI INVESTIGATIVE REPORT — <span id="ai-signame">WOW-X9</span>
+							</div>
+							<div id="ai-output">
+								<div class="ai-placeholder">
+									<div class="emoji">🛸</div>
+									<p>Click RUN AI ANALYSIS to generate report</p>
+								</div>
+							</div>
+						</div>
+					</div>
+
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<script>
+		const signals = [
+			{ id: "SIG-001", name: "WOW-X9", freq: "1420.4 MHz", intensity: 94, status: "CRITICAL", type: "Narrowband", coords: "RA 19h 22m", distance: "120 ly", time: "02:41:18", repeat: true },
+			{ id: "SIG-002", name: "BLAZE-7", freq: "2.3 GHz", intensity: 67, status: "FLAGGED", type: "Burst", coords: "RA 05h 14m", distance: "340 ly", time: "07:12:44", repeat: false },
+			{ id: "SIG-003", name: "ECHO-44", freq: "408 MHz", intensity: 45, status: "MONITORING", type: "Pulsar", coords: "RA 12h 56m", distance: "890 ly", time: "11:33:09", repeat: true },
+			{ id: "SIG-004", name: "DEEP-R3", freq: "1.6 GHz", intensity: 81, status: "FLAGGED", type: "Narrowband", coords: "RA 23h 08m", distance: "210 ly", time: "15:50:22", repeat: false },
+			{ id: "SIG-005", name: "NOVA-11", freq: "300 MHz", intensity: 29, status: "CLEAR", type: "RFI", coords: "RA 08h 47m", distance: "60 ly", time: "19:04:57", repeat: false },
+		];
+
+		const statusColors = { CRITICAL: "#ff3b3b", FLAGGED: "#ffb800", MONITORING: "#00cfff", CLEAR: "#00ff88" };
+		let selectedIdx = 0;
+		let liveIntensity = signals[0].intensity;
+		let scanAngle = 0;
+
+		// STARS
+		(function () {
+			const sf = document.getElementById('starfield');
+			for (let i = 0; i < 130; i++) {
+				const s = document.createElement('div');
+				s.className = 'star';
+				const size = Math.random() * 2.5 + 0.4;
+				s.style.cssText = `left:${Math.random() * 100}%;top:${Math.random() * 100}%;width:${size}px;height:${size}px;opacity:${Math.random() * .7 + .1};--dur:${2 + Math.random() * 4}s;`;
+				sf.appendChild(s);
+			}
+		})();
+
+		// CLOCK
+		setInterval(() => { document.getElementById('clock').textContent = new Date().toLocaleTimeString('en-GB'); }, 1000);
+
+		// SIGNAL LIST
+		function buildList() {
+			const container = document.getElementById('signal-list');
+			const header = container.querySelector('.list-header');
+			container.innerHTML = '';
+			container.appendChild(header);
+			signals.forEach((sig, i) => {
+				const div = document.createElement('div');
+				div.className = 'sig-item' + (i === selectedIdx ? ' active' : '');
+				div.onclick = () => selectSignal(i);
+				div.innerHTML = `
+      <div class="sig-top">
+        <div>
+          <div class="sig-name">${sig.name}</div>
+          <div class="sig-id">${sig.id} · ${sig.freq}</div>
+          <div class="sig-type">${sig.type} · ${sig.distance}</div>
+        </div>
+        <div style="text-align:right">
+          <span class="badge ${sig.status}">${sig.status}</span>
+          <div class="sig-intensity-pct">${sig.intensity}%</div>
+        </div>
+      </div>
+      <div class="intensity-bar">
+        <div class="intensity-fill" style="width:${sig.intensity}%;background:${statusColors[sig.status]}"></div>
+      </div>`;
+				container.appendChild(div);
+			});
+		}
+
+		// SELECT SIGNAL
+		function selectSignal(idx) {
+			selectedIdx = idx;
+			const sig = signals[idx];
+			liveIntensity = sig.intensity;
+			buildList();
+			document.getElementById('sel-name').textContent = sig.name;
+			const badge = document.getElementById('sel-badge');
+			badge.textContent = sig.status;
+			badge.className = `badge ${sig.status}`;
+			document.getElementById('sel-repeat').style.display = sig.repeat ? 'inline' : 'none';
+			document.getElementById('sel-meta').textContent = `${sig.id} · ${sig.freq} · ${sig.type} · ${sig.coords} · ${sig.distance}`;
+			document.getElementById('c-intensity').textContent = Math.round(liveIntensity) + '%';
+			document.getElementById('c-intensity').style.color = statusColors[sig.status];
+			document.getElementById('c-freq').textContent = sig.freq;
+			document.getElementById('c-dist').textContent = sig.distance;
+			document.getElementById('c-time').textContent = sig.time;
+			document.getElementById('ai-signame').textContent = sig.name;
+			document.getElementById('ai-output').innerHTML = `<div class="ai-placeholder"><div class="emoji">🛸</div><p>Click RUN AI ANALYSIS to generate report</p></div>`;
+			updateLiveBar();
+			updateRadarChart(sig);
+		}
+
+		// LIVE INTENSITY
+		setInterval(() => {
+			liveIntensity = Math.max(10, Math.min(99, liveIntensity + (Math.random() - 0.48) * 5));
+			const pct = Math.round(liveIntensity);
+			document.getElementById('c-intensity').textContent = pct + '%';
+			document.getElementById('live-pct').textContent = pct;
+			updateLiveBar();
+		}, 800);
+
+		function updateLiveBar() {
+			const col = statusColors[signals[selectedIdx].status];
+			const bar = document.getElementById('live-bar');
+			bar.style.width = Math.round(liveIntensity) + '%';
+			bar.style.background = `linear-gradient(90deg,${col},#00cfff)`;
+			bar.style.boxShadow = `0 0 12px ${col}`;
+		}
+
+		// RADAR SCANNER
+		(function animateRadar() {
+			scanAngle = (scanAngle + 1.5) % 360;
+			const rad = (scanAngle * Math.PI) / 180;
+			const cx = 50, cy = 50, r = 44;
+			const ex = cx + r * Math.cos(rad), ey = cy + r * Math.sin(rad);
+			const rad2 = rad - 1.2;
+			const sx = cx + r * Math.cos(rad2), sy = cy + r * Math.sin(rad2);
+			document.getElementById('sweep-line').setAttribute('x2', ex);
+			document.getElementById('sweep-line').setAttribute('y2', ey);
+			document.getElementById('sweep-path').setAttribute('d', `M${cx},${cy} L${ex},${ey} A${r},${r} 0 0,0 ${sx},${sy} Z`);
+			document.getElementById('sweep-angle').textContent = Math.round(scanAngle);
+			requestAnimationFrame(animateRadar);
+		})();
+
+		// CHARTS
+		let radarChart;
+		function buildRadarChart() {
+			const ctx = document.getElementById('radarChart').getContext('2d');
+			radarChart = new Chart(ctx, {
+				type: 'radar',
+				data: {
+					labels: ['Frequency', 'Repetition', 'Narrowband', 'Modulation', 'Duration', 'Origin'],
+					datasets: [{ data: [85, 70, 92, 60, 75, 55], borderColor: '#00cfff', backgroundColor: 'rgba(0,207,255,0.13)', borderWidth: 1.5, pointBackgroundColor: '#00cfff', pointRadius: 3 }]
+				},
+				options: {
+					responsive: true,
+					scales: { r: { grid: { color: 'rgba(0,207,255,0.1)' }, angleLines: { color: 'rgba(0,207,255,0.08)' }, pointLabels: { color: '#4a8aaa', font: { size: 9, family: "'Share Tech Mono'" } }, ticks: { display: false }, suggestedMin: 0, suggestedMax: 100 } },
+					plugins: { legend: { display: false } }, animation: { duration: 500 }
+				}
+			});
+		}
+
+		function updateRadarChart(sig) {
+			if (!radarChart) return;
+			const b = sig.intensity;
+			radarChart.data.datasets[0].data = [b + 5, b - 15, b + 2, b - 25, b - 10, b - 30].map(v => Math.max(10, Math.min(99, v)));
+			radarChart.update();
+		}
+
+		function buildLineChart() {
+			new Chart(document.getElementById('lineChart').getContext('2d'), {
+				type: 'line',
+				data: { labels: ['00:00', '03:00', '06:00', '09:00', '12:00', '15:00', '18:00', '21:00', '24:00'], datasets: [{ data: [12, 28, 19, 67, 45, 81, 94, 73, 55], borderColor: '#00cfff', backgroundColor: 'rgba(0,207,255,0.06)', borderWidth: 2, fill: true, tension: 0.4, pointRadius: 0 }] },
+				options: { responsive: true, scales: { x: { grid: { color: 'rgba(0,207,255,0.06)' }, ticks: { color: '#4a8aaa', font: { size: 9 } } }, y: { grid: { color: 'rgba(0,207,255,0.06)' }, ticks: { color: '#4a8aaa', font: { size: 9 } } } }, plugins: { legend: { display: false }, tooltip: { backgroundColor: '#020818', borderColor: '#00cfff44', borderWidth: 1, titleColor: '#00cfff', bodyColor: '#c8e6ff' } } }
+			});
+		}
+
+		function buildBarChart() {
+			new Chart(document.getElementById('barChart').getContext('2d'), {
+				type: 'bar',
+				data: { labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'], datasets: [{ data: [4, 7, 3, 9, 6, 12, 8], backgroundColor: 'rgba(0,207,255,0.15)', borderColor: 'rgba(0,207,255,0.5)', borderWidth: 1, borderRadius: 3 }] },
+				options: { responsive: true, scales: { x: { grid: { color: 'rgba(0,207,255,0.05)' }, ticks: { color: '#4a8aaa', font: { size: 9 } } }, y: { grid: { color: 'rgba(0,207,255,0.05)' }, ticks: { color: '#4a8aaa', font: { size: 9 } } } }, plugins: { legend: { display: false }, tooltip: { backgroundColor: '#020818', borderColor: '#00cfff44', borderWidth: 1, titleColor: '#00cfff', bodyColor: '#c8e6ff' } } }
+			});
+		}
+
+		function buildLogTable() {
+			const tbody = document.getElementById('log-tbody');
+			signals.forEach(sig => {
+				const tr = document.createElement('tr');
+				tr.innerHTML = `<td style="color:var(--muted)">${sig.id}</td><td style="font-weight:bold;color:#c8e6ff">${sig.name}</td><td style="color:var(--muted)">${sig.type}</td><td style="color:#7aaac8">${sig.freq}</td><td style="color:#7aaac8">${sig.distance}</td><td style="color:var(--muted)">${sig.time}</td><td><span class="badge ${sig.status}">${sig.status}</span></td>`;
+				tbody.appendChild(tr);
+			});
+		}
+
+		function switchTab(name, btn) {
+			document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+			document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+			document.getElementById('tab-' + name).classList.add('active');
+			btn.classList.add('active');
+		}
+
+		async function runAI() {
+			const sig = signals[selectedIdx];
+			document.getElementById('ai-signame').textContent = sig.name;
+			document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+			document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+			document.getElementById('tab-ai').classList.add('active');
+			document.querySelectorAll('.tab-btn')[3].classList.add('active');
+			document.getElementById('ai-output').innerHTML = `<div class="ai-loading"><div class="spinner"></div><div class="spin-lbl">ANALYZING SIGNAL...</div></div>`;
+			try {
+				const res = await fetch("https://api.anthropic.com/v1/messages", {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({
+						model: "claude-sonnet-4-20250514",
+						max_tokens: 1000,
+						system: "You are an AI deep-space signal analyst for a SETI research station. Write concise, scientific, exciting investigative reports on anomalous signals. Use real astronomical terms. Keep it under 180 words. Format with short bold section labels like **SIGNAL PROFILE:**, **ANALYSIS:**, **VERDICT:**.",
+						messages: [{ role: "user", content: `Analyze this deep-space signal: ID=${sig.id}, Name=${sig.name}, Frequency=${sig.freq}, Intensity=${Math.round(liveIntensity)}%, Type=${sig.type}, Coordinates=${sig.coords}, Distance=${sig.distance}, Repeating=${sig.repeat}, Status=${sig.status}. Generate an investigative report.` }]
+					})
+				});
+				const data = await res.json();
+				const raw = (data.content || []).map(b => b.text || '').join('') || 'No report generated.';
+				const rendered = raw.split(/(\*\*[^*]+\*\*)/g).map(p => p.startsWith('**') && p.endsWith('**') ? `<span class="ai-bold">${p.slice(2, -2)}</span>` : p.replace(/\n/g, '<br>')).join('');
+				document.getElementById('ai-output').innerHTML = rendered;
+			} catch (e) {
+				document.getElementById('ai-output').innerHTML = `<span style="color:#ff3b3b">⚠ Error connecting to AI engine. Check network connection.</span>`;
+			}
+		}
+
+		// INIT
+		buildList();
+		buildRadarChart();
+		buildLineChart();
+		buildBarChart();
+		buildLogTable();
+		updateRadarChart(signals[0]);
+	</script>
+</body>
+
+</html>
